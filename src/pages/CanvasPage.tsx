@@ -174,7 +174,7 @@ function CanvasPage(): JSX.Element {
                                     size="small"
                                     type="color"
                                     value={color}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleColorChange(e.target?.value)}
+                                    onChange={() => handleColorChange(e?.target?.value)}
                                     fullWidth
                                 />
                             </Stack>
