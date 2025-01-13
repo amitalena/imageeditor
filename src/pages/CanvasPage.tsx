@@ -14,12 +14,11 @@ import { Button, TextField, Stack, Grid, Box, Typography } from "@mui/material";
 import * as fabric from "fabric";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { RiBringToFront } from "react-icons/ri";
-import { useParams } from "react-router-dom";
 
 function CanvasPage(): JSX.Element {
-    const { imageurl } = useParams<{ imageurl: string }>();
     const canvasRef = useRef<fabric.Canvas | null>(null);
-    const [color, setColor] = useState("#000000");
+    const [imageurl, setImageUrl] = useState<string>("");
+    const [color, setColor] = useState<string>("#ffffff");
     const [textSize, setTextSize] = useState(20);
 
     useEffect(() => {
@@ -29,8 +28,8 @@ function CanvasPage(): JSX.Element {
         canvasRef.current = canvas;
 
         if (imageurl) {
-            fabric.Image.fromURL(imageurl, (img) => {
-                if (img instanceof fabric.Image) { // Type check for instance
+            fabric.Image.fromURL(imageurl, (img: fabric.Image | undefined) => {
+                if (img) {
                     img.filters = img.filters || [];
                     img.filters.push(new fabric.Image.filters.Grayscale());
                     img.applyFilters();
@@ -61,7 +60,8 @@ function CanvasPage(): JSX.Element {
     }, [addObject, color, textSize]);
 
     const handleColorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setColor(event.target.value); // Correctly handle the input event
+        const value = event.target.value;
+        setColor(value); // Correctly handle the input event
     };
 
     const increaseTextSize = () => {
@@ -169,12 +169,13 @@ function CanvasPage(): JSX.Element {
                     <Stack direction="column" spacing={2}>
                         <Box>
                             <Stack alignItems="center" direction="row" spacing={2}>
+                                <TextField type="text" onChange={(e) => setImageUrl(e.target.value)} />
                                 <Typography>Color:</Typography>
                                 <TextField
                                     size="small"
                                     type="color"
                                     value={color}
-                                    onChange={() => handleColorChange(e?.target?.value)}
+                                    onChange={handleColorChange}
                                     fullWidth
                                 />
                             </Stack>
