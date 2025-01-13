@@ -11,7 +11,7 @@ import {
     TitleOutlined,
 } from "@mui/icons-material";
 import { Button, TextField, Stack, Grid, Box, Typography } from "@mui/material";
-import *as fabric from "fabric";
+import * as fabric from "fabric";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { RiBringToFront } from "react-icons/ri";
 import { useParams } from "react-router-dom";
@@ -21,55 +21,39 @@ function CanvasPage(): JSX.Element {
     const canvasRef = useRef<fabric.Canvas | null>(null);
     const [color, setColor] = useState("#000000");
     const [textSize, setTextSize] = useState(20);
+
     useEffect(() => {
         const canvas = new fabric.Canvas("canvas", {
-            preserveObjectStacking: true,
-            selection: true,
+            backgroundColor: "#fff",
         });
         canvasRef.current = canvas;
 
         if (imageurl) {
             fabric.Image.fromURL(imageurl, (img) => {
-                if (img) {
-                    img.filters?.push(new fabric.Image.filters.Grayscale());
+                if (img instanceof fabric.Image) { // Type check for instance
+                    img.filters = img.filters || [];
+                    img.filters.push(new fabric.Image.filters.Grayscale());
                     img.applyFilters();
                     canvas.add(img);
                 }
             });
         }
 
-        canvas.on("object:selected", (event) => {
-            const activeObject = event.target as fabric.Object;
-            if (activeObject) {
-                activeObject.set({
-                    borderColor: "blue",
-                    cornerColor: "blue",
-                    cornerSize: 8,
-                    transparentCorners: false,
-                });
-                canvas.renderAll();
-            }
-        });
-
         return () => {
             canvas.dispose();
-            canvasRef.current = null;
         };
     }, [imageurl]);
 
     const addObject = useCallback((object: fabric.Object) => {
-        const canvas = canvasRef.current;
-        if (canvas) {
-            canvas.add(object).setActiveObject(object);
-            canvas.renderAll();
-        }
+        canvasRef.current?.add(object);
     }, []);
 
     const addText = useCallback(() => {
         const text = new fabric.Textbox("Edit me", {
             left: 50,
             top: 50,
-            fontSize: 20,
+            fontSize: textSize,
+            fill: color,
             editable: true,
             width: 150,
         });
@@ -77,7 +61,7 @@ function CanvasPage(): JSX.Element {
     }, [addObject, color, textSize]);
 
     const handleColorChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setColor(event.target.value);
+        setColor(event.target.value); // Correctly handle the input event
     };
 
     const increaseTextSize = () => {
@@ -93,21 +77,21 @@ function CanvasPage(): JSX.Element {
             const shapes: Record<string, fabric.Object> = {
                 circle: new fabric.Circle({
                     radius: 50,
-                    fill: "red",
+                    fill: color,
                     left: 100,
                     top: 100,
                 }),
                 rectangle: new fabric.Rect({
                     width: 100,
                     height: 50,
-                    fill: "blue",
+                    fill: color,
                     left: 150,
                     top: 150,
                 }),
                 triangle: new fabric.Triangle({
                     width: 100,
                     height: 100,
-                    fill: "green",
+                    fill: color,
                     left: 200,
                     top: 200,
                 }),
@@ -121,7 +105,7 @@ function CanvasPage(): JSX.Element {
                         { x: 100, y: 100 },
                     ],
                     {
-                        fill: "purple",
+                        fill: color,
                         left: 250,
                         top: 250,
                     }
@@ -130,7 +114,7 @@ function CanvasPage(): JSX.Element {
             const shape = shapes[type];
             if (shape) addObject(shape);
         },
-        [addObject]
+        [addObject, color]
     );
 
     const deleteObject = useCallback(() => {
@@ -138,7 +122,6 @@ function CanvasPage(): JSX.Element {
         const activeObject = canvas?.getActiveObject();
         if (canvas && activeObject) {
             canvas.remove(activeObject);
-            canvas.renderAll();
         }
     }, []);
 
@@ -146,23 +129,22 @@ function CanvasPage(): JSX.Element {
         canvasRef.current?.clear();
     }, []);
 
-    const adjustZIndex = useCallback((action: "forward" | "backward") => {
+    const adjustZIndex = useCallback((direction: "forward" | "backward") => {
         const canvas = canvasRef.current;
         const activeObject = canvas?.getActiveObject();
         if (canvas && activeObject) {
-            if (action === "forward") {
-                canvas.bringForward(activeObject);
+            if (direction === "forward") {
+                (canvas as fabric.Canvas).bringObjectForward(activeObject);
             } else {
-                canvas.sendBackwards(activeObject);
+                (canvas as fabric.Canvas).sendObjectBackwards(activeObject);
             }
-            canvas.renderAll();
         }
     }, []);
 
     const downloadCanvas = useCallback(() => {
         const canvas = canvasRef.current;
         if (canvas) {
-            const dataURL = canvas.toDataURL({ format: "png", quality: 1 });
+            const dataURL = canvas.toDataURL({ format: "png", quality: 1, multiplier: 1 });
             const link = document.createElement("a");
             link.href = dataURL;
             link.download = "canvas-image.png";
@@ -173,7 +155,7 @@ function CanvasPage(): JSX.Element {
     }, []);
 
     return (
-        <Box sx={{ height: '100vh', width: "100%", p: 2 }}>
+        <Box sx={{ height: "100vh", width: "100%", p: 2 }}>
             <Grid container spacing={2}>
                 <Grid item xs={12} lg={9}>
                     <canvas
@@ -186,18 +168,17 @@ function CanvasPage(): JSX.Element {
                 <Grid item xs={12} lg={3}>
                     <Stack direction="column" spacing={2}>
                         <Box>
-
-                            <Stack alignItems={'center'} direction="row" spacing={2}>
+                            <Stack alignItems="center" direction="row" spacing={2}>
                                 <Typography>Color:</Typography>
                                 <TextField
                                     size="small"
                                     type="color"
                                     value={color}
-                                    onChange={(e) => handleColorChange(e.target.value)}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleColorChange(e.target?.value)}
                                     fullWidth
                                 />
                             </Stack>
-                            <Stack alignItems={'center'} sx={{ my: 2 }} direction="row" spacing={2}>
+                            <Stack alignItems="center" sx={{ my: 2 }} direction="row" spacing={2}>
                                 <Typography>Size:</Typography>
                                 <Box display="flex" gap={2}>
                                     <Button size="small" variant="outlined" onClick={decreaseTextSize}>
@@ -208,7 +189,6 @@ function CanvasPage(): JSX.Element {
                                     </Button>
                                 </Box>
                             </Stack>
-
                             <Box display="flex" gap={2}>
                                 <Button variant="outlined" onClick={addText}>
                                     Text <TitleOutlined />
